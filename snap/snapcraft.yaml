@@ -1,0 +1,78 @@
+name: crossbar
+version: '0.1'
+summary: Crossbar.io - Polyglot application router.
+description: |
+  Crossbar.io is a networking platform for distributed and microservice
+  applications. It is feature rich, scalable, robust and secure. Let
+  Crossbar.io take care of the hard parts of messaging so you can focus
+  on your app's features.
+
+grade: stable
+confinement: strict
+base: core18
+
+architectures:
+  - build-on: amd64
+    run-on: amd64
+
+  - build-on: i386
+    run-on: i386
+
+  - build-on: armhf
+    run-on: armhf
+
+  - build-on: arm64
+    run-on: arm64
+
+apps:
+  crossbar:
+    command: python3.8 -u $SNAP/bin/crossbar
+    environment:
+      PYTHONPYCACHEPREFIX: $SNAP_DATA/pycache
+      PYTHONPATH: $PYTHONPATH:$SNAP/lib/python3.8/site-packages
+    plugs:
+      - home
+      - network
+      - network-bind
+
+parts:
+  py38:
+    plugin: nil
+    override-build: |
+      add-apt-repository ppa:deadsnakes/ppa -y
+      apt update
+      apt install python3.8 python3.8-venv python3.8-dev -y
+  crossbar:
+    plugin: nil
+    source: .
+    after:
+      - py38
+    override-build: |
+      snapcraftctl build
+      rm -rf venv
+      /usr/bin/python3.8 -m venv venv
+      venv/bin/python3 -m pip install crossbar
+      find venv -type d -name __pycache__ -print0 | xargs -0 rm -rf
+      cp -r venv/* ${SNAPCRAFT_PART_INSTALL}
+    stage-packages:
+      - libsnappy1v5
+      - libunwind8
+      - python3.8
+    build-packages:
+      - build-essential
+      - gcc
+      - libffi-dev
+      - libssl-dev
+      - make
+      - libbz2-dev
+      - libsnappy-dev
+      - libunwind-dev
+      - git
+      - software-properties-common
+
+slots:
+  runtime-dir:
+    interface: content
+    content: executables
+    read:
+      - $SNAP
